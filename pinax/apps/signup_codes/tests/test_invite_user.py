@@ -11,6 +11,11 @@ import signup_codes
 
 from signup_codes.models import SignupCode
 
+try:
+    from django.utils.timezone import now
+except ImportError:
+    now = datetime.datetime.now
+
 
 class InviteUserTest(TestCase):
     
@@ -82,7 +87,7 @@ class InviteUserTest(TestCase):
         #print help(self)
         # Create an invitation
         email = "joe@example.com"
-        expiry = datetime.datetime.now() + datetime.timedelta(hours=1)
+        expiry = now() + datetime.timedelta(hours=1)
         code = sha_constructor("%s%s%s%s" % (
             settings.SECRET_KEY,
             email,

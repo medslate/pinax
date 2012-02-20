@@ -13,6 +13,11 @@ from emailconfirmation.models import EmailAddress, EmailConfirmation
 from emailconfirmation.signals import email_confirmed
 from timezones.fields import TimeZoneField
 
+try:
+    from django.utils.timezone import now
+except ImportError:
+    now = datetime.datetime.now
+
 
 class Account(models.Model):
     
@@ -48,7 +53,7 @@ class PasswordReset(models.Model):
     user = models.ForeignKey(User, verbose_name=_("user"))
     
     temp_key = models.CharField(_("temp_key"), max_length=100)
-    timestamp = models.DateTimeField(_("timestamp"), default=datetime.datetime.now)
+    timestamp = models.DateTimeField(_("timestamp"), default=now())
     reset = models.BooleanField(_("reset yet?"), default=False)
     
     def __unicode__(self):
