@@ -199,6 +199,17 @@ class SignupForm(GroupForm):
         username = self.cleaned_data.get("username")
         new_user = self.create_user(username)
 
+        self.handle_confirmation(request=request)
+
+        if EMAIL_VERIFICATION:
+            new_user.is_active = False
+            new_user.save()
+        
+        self.after_signup(new_user)
+        
+        return new_user
+
+    def handle_confirmation(self, new_user, request=None):
         email = self.cleaned_data["email"]
 
         if self.cleaned_data["confirmation_key"]:
@@ -210,9 +221,9 @@ class SignupForm(GroupForm):
                 confirmed = False
         else:
             confirmed = False
-        
+
         # @@@ clean up some of the repetition below -- DRY!
-        
+
         if confirmed:
             if email == join_invitation.contact.email:
                 join_invitation.accept(new_user) # should go before creation of EmailAddress below
@@ -241,14 +252,6 @@ class SignupForm(GroupForm):
                         }
                     )
                 EmailAddress.objects.add_email(new_user, email)
-        
-        if EMAIL_VERIFICATION:
-            new_user.is_active = False
-            new_user.save()
-        
-        self.after_signup(new_user)
-        
-        return new_user
 
     def is_valid(self, *args, **kwargs):
         result = super(SignupForm, self).is_valid(*args, **kwargs)
