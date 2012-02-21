@@ -158,9 +158,8 @@ def signup(request, **kwargs):
                 return HttpResponseRedirect(success_url)
     else:
         confirmation_key = request.GET.get("code")
-        signup_code = SignupCode.check(confirmation_key)
         initial = {}
-        if signup_code:
+        if confirmation_key:
             initial["confirmation_key"] = confirmation_key
         form = form_class(group=group, initial=initial)
 
