@@ -197,8 +197,10 @@ class SignupForm(GroupForm):
         # don't assume a username is available. it is a common removal if
         # site developer wants to use email authentication.
         username = self.cleaned_data.get("username")
+        new_user = self.create_user(username)
+
         email = self.cleaned_data["email"]
-        
+
         if self.cleaned_data["confirmation_key"]:
             from friends.models import JoinInvitation # @@@ temporary fix for issue 93
             try:
@@ -213,7 +215,6 @@ class SignupForm(GroupForm):
         
         if confirmed:
             if email == join_invitation.contact.email:
-                new_user = self.create_user(username)
                 join_invitation.accept(new_user) # should go before creation of EmailAddress below
                 if request:
                     messages.add_message(request, messages.INFO,
@@ -222,7 +223,6 @@ class SignupForm(GroupForm):
                 # already verified so can just create
                 EmailAddress(user=new_user, email=email, verified=True, primary=True).save()
             else:
-                new_user = self.create_user(username)
                 join_invitation.accept(new_user) # should go before creation of EmailAddress below
                 if email:
                     if request:
@@ -233,7 +233,6 @@ class SignupForm(GroupForm):
                         )
                     EmailAddress.objects.add_email(new_user, email)
         else:
-            new_user = self.create_user(username)
             if email:
                 if request and not EMAIL_VERIFICATION:
                     messages.add_message(request, messages.INFO,
@@ -250,7 +249,7 @@ class SignupForm(GroupForm):
         self.after_signup(new_user)
         
         return new_user
-    
+
     def is_valid(self, *args, **kwargs):
         result = super(SignupForm, self).is_valid(*args, **kwargs)
         user_sign_up_attempt.send(
