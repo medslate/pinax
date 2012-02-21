@@ -199,7 +199,7 @@ class SignupForm(GroupForm):
         username = self.cleaned_data.get("username")
         new_user = self.create_user(username)
 
-        self.handle_confirmation(request=request)
+        self.handle_confirmation(new_user, request=request)
 
         if EMAIL_VERIFICATION:
             new_user.is_active = False
