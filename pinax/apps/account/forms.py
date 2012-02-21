@@ -212,46 +212,37 @@ class SignupForm(GroupForm):
     def handle_confirmation(self, new_user, request=None):
         email = self.cleaned_data["email"]
 
+        join_invitation = None
         if self.cleaned_data["confirmation_key"]:
             from friends.models import JoinInvitation # @@@ temporary fix for issue 93
             try:
                 join_invitation = JoinInvitation.objects.get(confirmation_key=self.cleaned_data["confirmation_key"])
-                confirmed = True
             except JoinInvitation.DoesNotExist:
-                confirmed = False
-        else:
-            confirmed = False
+                pass
 
-        # @@@ clean up some of the repetition below -- DRY!
+        verified = False
+        if join_invitation:
+            join_invitation.accept(new_user) # should go before creation of EmailAddress below
+            if email and email == join_invitation.contact.email:
+                verified = True
 
-        if confirmed:
-            if email == join_invitation.contact.email:
-                join_invitation.accept(new_user) # should go before creation of EmailAddress below
-                if request:
-                    messages.add_message(request, messages.INFO,
-                        ugettext(u"Your email address has already been verified")
-                    )
-                # already verified so can just create
-                EmailAddress(user=new_user, email=email, verified=True, primary=True).save()
-            else:
-                join_invitation.accept(new_user) # should go before creation of EmailAddress below
-                if email:
-                    if request:
-                        messages.add_message(request, messages.INFO,
-                            ugettext(u"Confirmation email sent to %(email)s") % {
-                                "email": email,
-                            }
-                        )
-                    EmailAddress.objects.add_email(new_user, email)
+        if verified:
+            EmailAddress(user=new_user, email=email, verified=True, primary=True).save()
+            if request:
+                messages.add_message(request, messages.INFO,
+                    ugettext(u"Your email address has already been verified")
+                )
         else:
             if email:
-                if request and not EMAIL_VERIFICATION:
+                EmailAddress.objects.add_email(new_user, email)
+                # TODO: according to original logic email is sent always, but
+                # the message is displayed conditionally. Why?
+                if request and (join_invitation or not EMAIL_VERIFICATION):
                     messages.add_message(request, messages.INFO,
                         ugettext(u"Confirmation email sent to %(email)s") % {
                             "email": email,
                         }
                     )
-                EmailAddress.objects.add_email(new_user, email)
 
     def is_valid(self, *args, **kwargs):
         result = super(SignupForm, self).is_valid(*args, **kwargs)
