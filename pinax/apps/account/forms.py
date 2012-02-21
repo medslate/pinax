@@ -199,9 +199,9 @@ class SignupForm(GroupForm):
         username = self.cleaned_data.get("username")
         new_user = self.create_user(username)
 
-        self.handle_confirmation(new_user, request=request)
+        verified = self.handle_confirmation(new_user, request=request)
 
-        if EMAIL_VERIFICATION:
+        if EMAIL_VERIFICATION and not verified:
             new_user.is_active = False
             new_user.save()
         
@@ -250,6 +250,8 @@ class SignupForm(GroupForm):
                             "email": email,
                         }
                     )
+
+        return verified
 
     def is_valid(self, *args, **kwargs):
         result = super(SignupForm, self).is_valid(*args, **kwargs)
