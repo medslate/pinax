@@ -217,14 +217,19 @@ class SignupForm(GroupForm):
         For legacy reasons it is tied to django-friends, so you most definitely
         want to override this if you want to use it wih Kaleo or custom
         confirmation/invitation apps.
+
+        It must return verification status indicating if user account
+        is active or not.
         """
+        from friends.models import JoinInvitation
+
         email = self.cleaned_data["email"]
 
         join_invitation = None
         if self.cleaned_data["confirmation_key"]:
-            from friends.models import JoinInvitation # @@@ temporary fix for issue 93
             try:
-                join_invitation = JoinInvitation.objects.get(confirmation_key=self.cleaned_data["confirmation_key"])
+                join_invitation = JoinInvitation.objects.get(
+                    confirmation_key=self.cleaned_data["confirmation_key"])
             except JoinInvitation.DoesNotExist:
                 pass
 
@@ -237,16 +242,15 @@ class SignupForm(GroupForm):
         if verified:
             EmailAddress(user=new_user, email=email, verified=True, primary=True).save()
             if request:
-                messages.add_message(request, messages.INFO,
-                    ugettext(u"Your email address has already been verified")
-                )
+                messages.info(request,
+                    ugettext(u"Your email address has already been verified"))
         else:
             if email:
                 EmailAddress.objects.add_email(new_user, email)
                 # TODO: according to original logic email is sent always, but
                 # the message is displayed conditionally. Why?
                 if request and (join_invitation or not EMAIL_VERIFICATION):
-                    messages.add_message(request, messages.INFO,
+                    messages.info(request,
                         ugettext(u"Confirmation email sent to %(email)s") % {
                             "email": email,
                         }
