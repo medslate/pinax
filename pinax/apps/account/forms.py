@@ -3,6 +3,7 @@ import re
 from django import forms
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _, ugettext
 from django.utils.http import int_to_base36
@@ -197,13 +198,13 @@ class SignupForm(GroupForm):
         # don't assume a username is available. it is a common removal if
         # site developer wants to use email authentication.
         username = self.cleaned_data.get("username")
-        new_user = self.create_user(username)
 
-        verified = self.handle_confirmation(new_user, request=request)
-
-        if EMAIL_VERIFICATION and not verified:
-            new_user.is_active = False
-            new_user.save()
+        with transaction.commit_on_success():
+            new_user = self.create_user(username)
+            verified = self.handle_confirmation(new_user, request=request)
+            if EMAIL_VERIFICATION and not verified:
+                new_user.is_active = False
+                new_user.save()
         
         self.after_signup(new_user)
         
