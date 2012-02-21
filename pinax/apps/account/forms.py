@@ -212,14 +212,52 @@ class SignupForm(GroupForm):
 
     def handle_confirmation(self, new_user, request=None):
         """
-        Performs any signup/invite code verification.
+        Creates EmailAddress object for new user and triggers email
+        verification process.
 
-        For legacy reasons it is tied to django-friends, so you most definitely
-        want to override this if you want to use it wih Kaleo or custom
-        confirmation/invitation apps.
+        Override this method to performs any signup/invite code verification
+        (i.e. unique code sent in friend invite email).
 
         It must return verification status indicating if user account
-        is active or not.
+        email is verified at this point or not.
+        """
+        email = self.cleaned_data["email"]
+
+        if email:
+            EmailAddress.objects.add_email(new_user, email)
+            messages.info(request,
+                ugettext(u"Confirmation email sent to %(email)s") % {
+                    "email": email,
+                }
+            )
+
+        return False # No email verified yet
+
+    def is_valid(self, *args, **kwargs):
+        result = super(SignupForm, self).is_valid(*args, **kwargs)
+        user_sign_up_attempt.send(
+            sender=SignupForm,
+            username=self.data.get("username"),
+            email=self.data.get("email"),
+            result=result
+        )
+        return result
+    
+    def after_signup(self, user, **kwargs):
+        """
+        An extension point for subclasses.
+        """
+        user_signed_up.send(sender=SignupForm, user=user)
+
+
+class DjangoFriendsSignupForm(SignupForm):
+
+    def handle_confirmation(self, new_user, request=None):
+        """
+        This is the legacy django-friends join invitation handler used to mark
+        email address as verified when:
+            - provided confirmation key matches join invitation key and
+            - provided email address matches join invitation email address
         """
         from friends.models import JoinInvitation
 
@@ -257,22 +295,6 @@ class SignupForm(GroupForm):
                     )
 
         return verified
-
-    def is_valid(self, *args, **kwargs):
-        result = super(SignupForm, self).is_valid(*args, **kwargs)
-        user_sign_up_attempt.send(
-            sender=SignupForm,
-            username=self.data.get("username"),
-            email=self.data.get("email"),
-            result=result
-        )
-        return result
-    
-    def after_signup(self, user, **kwargs):
-        """
-        An extension point for subclasses.
-        """
-        user_signed_up.send(sender=SignupForm, user=user)
 
 
 class OpenIDSignupForm(SignupForm):
