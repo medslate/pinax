@@ -210,6 +210,13 @@ class SignupForm(GroupForm):
         return new_user
 
     def handle_confirmation(self, new_user, request=None):
+        """
+        Performs any signup/invite code verification.
+
+        For legacy reasons it is tied to django-friends, so you most definitely
+        want to override this if you want to use it wih Kaleo or custom
+        confirmation/invitation apps.
+        """
         email = self.cleaned_data["email"]
 
         join_invitation = None
