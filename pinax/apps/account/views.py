@@ -20,6 +20,7 @@ association_model = models.get_model("django_openid", "Association")
 if association_model is not None:
     from django_openid.models import UserOpenidAssociation
 
+from pinax.apps.signup_codes.models import SignupCode
 from pinax.apps.account.utils import get_default_redirect, user_display
 from pinax.apps.account.forms import AddEmailForm, ChangeLanguageForm, ChangePasswordForm
 from pinax.apps.account.forms import ChangeTimezoneForm, LoginForm, ResetPasswordKeyForm
@@ -156,8 +157,13 @@ def signup(request, **kwargs):
                 )
                 return HttpResponseRedirect(success_url)
     else:
-        form = form_class(group=group)
-    
+        confirmation_key = request.GET.get("code")
+        signup_code = SignupCode.check(confirmation_key)
+        initial = {}
+        if signup_code:
+            initial["confirmation_key"] = confirmation_key
+        form = form_class(group=group, initial=initial)
+
     ctx.update({
         "form": form,
         "redirect_field_name": redirect_field_name,
